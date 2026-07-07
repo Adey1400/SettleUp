@@ -1,4 +1,4 @@
-package com.SplitUp.user_service.service;
+package com.SettleUp.user_service.service;
 
 
 
@@ -8,11 +8,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.SplitUp.user_service.DTO.AuthRequest;
-import com.SplitUp.user_service.DTO.AuthResponse;
-import com.SplitUp.user_service.DTO.RegisterRequest;
-import com.SplitUp.user_service.Entity.User;
-import com.SplitUp.user_service.repository.UserRepository;
+import com.SettleUp.user_service.DTO.AuthRequest;
+import com.SettleUp.user_service.DTO.AuthResponse;
+import com.SettleUp.user_service.DTO.RegisterRequest;
+import com.SettleUp.user_service.Entity.User;
+import com.SettleUp.user_service.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 

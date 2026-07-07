@@ -1,4 +1,4 @@
-package com.SplitUp.user_service.config;
+package com.SettleUp.user_service.config;
 
 
 import org.springframework.context.annotation.Bean;

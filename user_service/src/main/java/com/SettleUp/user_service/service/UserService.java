@@ -1,11 +1,11 @@
-package com.SplitUp.user_service.service;
+package com.SettleUp.user_service.service;
 
 import org.springframework.stereotype.Service;
 
-import com.SplitUp.user_service.DTO.UserProfileResponse;
-import com.SplitUp.user_service.DTO.UserProfileUpdateRequest;
-import com.SplitUp.user_service.Entity.User;
-import com.SplitUp.user_service.repository.UserRepository;
+import com.SettleUp.user_service.DTO.UserProfileResponse;
+import com.SettleUp.user_service.DTO.UserProfileUpdateRequest;
+import com.SettleUp.user_service.Entity.User;
+import com.SettleUp.user_service.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 

@@ -1,4 +1,4 @@
-package com.SplitUp.user_service.service;
+package com.SettleUp.user_service.service;
 
 
 import java.security.Key;

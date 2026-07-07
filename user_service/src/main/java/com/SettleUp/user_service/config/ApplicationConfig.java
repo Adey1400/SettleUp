@@ -1,4 +1,4 @@
-package com.SplitUp.user_service.config;
+package com.SettleUp.user_service.config;
 
 
 
@@ -17,7 +17,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import com.SplitUp.user_service.repository.UserRepository;
+import com.SettleUp.user_service.repository.UserRepository;
 
 
 

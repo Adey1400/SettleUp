@@ -1,4 +1,4 @@
-package com.SplitUp.user_service.controller;
+package com.SettleUp.user_service.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -6,10 +6,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.SplitUp.user_service.DTO.AuthRequest;
-import com.SplitUp.user_service.DTO.AuthResponse;
-import com.SplitUp.user_service.DTO.RegisterRequest;
-import com.SplitUp.user_service.service.AuthService;
+import com.SettleUp.user_service.DTO.AuthRequest;
+import com.SettleUp.user_service.DTO.AuthResponse;
+import com.SettleUp.user_service.DTO.RegisterRequest;
+import com.SettleUp.user_service.service.AuthService;
 
 import jakarta.validation.Valid;
 

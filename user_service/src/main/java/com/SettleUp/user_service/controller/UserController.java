@@ -1,4 +1,4 @@
-package com.SplitUp.user_service.controller;
+package com.SettleUp.user_service.controller;
 
 
 
@@ -11,9 +11,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.SplitUp.user_service.DTO.UserProfileResponse;
-import com.SplitUp.user_service.DTO.UserProfileUpdateRequest;
-import com.SplitUp.user_service.service.UserService;
+import com.SettleUp.user_service.DTO.UserProfileResponse;
+import com.SettleUp.user_service.DTO.UserProfileUpdateRequest;
+import com.SettleUp.user_service.service.UserService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

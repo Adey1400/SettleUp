@@ -1,4 +1,4 @@
-package com.fastcart.api_gateway.util;
+package com.settleup.api_gateway.util;
 
 
 import io.jsonwebtoken.Jwts;

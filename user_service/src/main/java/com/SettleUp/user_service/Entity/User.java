@@ -1,4 +1,4 @@
-package com.SplitUp.user_service.Entity;
+package com.SettleUp.user_service.Entity;
 
 import jakarta.persistence.Entity;
 

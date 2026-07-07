@@ -1,4 +1,4 @@
-package com.SplitUp.user_service.DTO;
+package com.SettleUp.user_service.DTO;
 
 public record UserProfileResponse(
     Long id,

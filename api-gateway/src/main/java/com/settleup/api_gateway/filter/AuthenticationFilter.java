@@ -1,4 +1,4 @@
-package com.fastcart.api_gateway.filter;
+package com.settleup.api_gateway.filter;
 
 
 
@@ -9,7 +9,9 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
-import com.fastcart.api_gateway.util.JwtUtil;
+import com.settleup.api_gateway.util.JwtUtil;
+
+
 
 @Component
 public class AuthenticationFilter extends AbstractGatewayFilterFactory<AuthenticationFilter.Config> {

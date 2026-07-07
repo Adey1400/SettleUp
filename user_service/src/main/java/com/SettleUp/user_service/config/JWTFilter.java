@@ -1,4 +1,4 @@
-package com.SplitUp.user_service.config;
+package com.SettleUp.user_service.config;
 
 
 
@@ -15,7 +15,7 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.SplitUp.user_service.service.JwtService;
+import com.SettleUp.user_service.service.JwtService;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
