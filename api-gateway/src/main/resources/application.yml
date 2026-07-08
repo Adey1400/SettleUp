@@ -7,8 +7,7 @@ spring:
 
   security:
     jwt:
-      secret: ${SECRET_KEY}
-
+      secret: ${JWT_SECRET}
   cloud:
     gateway:
       routes:
