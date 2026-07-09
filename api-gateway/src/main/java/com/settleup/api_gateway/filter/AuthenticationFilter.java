@@ -1,14 +1,9 @@
 package com.settleup.api_gateway.filter;
-
-
-
-
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
-
 import com.settleup.api_gateway.util.JwtUtil;
 
 
@@ -52,7 +47,6 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
             return chain.filter(exchange);
         };
     }
-
     public static class Config {
         // Required empty class for Spring Cloud Gateway filter structure
     }

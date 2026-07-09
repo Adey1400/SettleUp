@@ -5,9 +5,8 @@ spring:
   application:
     name: api-gateway
 
-  security:
-    jwt:
-      secret: ${JWT_SECRET}
+
+
   cloud:
     gateway:
       routes:
@@ -22,3 +21,7 @@ spring:
             - Path=/api/v1/users/**
           filters:
             - AuthenticationFilter
+application:
+  security:
+    jwt:
+      secret: ${JWT_SECRET}

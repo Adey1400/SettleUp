@@ -12,7 +12,7 @@ import java.security.Key;
 public class JwtUtil {
 
 
-   @Value("${spring.security.jwt.secret}")
+   @Value("${application.security.jwt.secret}")
     private String secretKey;
 
     public void validateToken(final String token) {

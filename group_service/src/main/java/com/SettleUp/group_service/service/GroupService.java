@@ -7,8 +7,10 @@ import java.util.Set;
 import java.util.HashSet;
 import org.springframework.stereotype.Service;
 
+import com.SettleUp.group_service.DTO.AddMemberRequest;
 import com.SettleUp.group_service.DTO.CreateGroupRequest;
 import com.SettleUp.group_service.DTO.GroupResponse;
+import com.SettleUp.group_service.DTO.UpdateGroupRequest;
 import com.SettleUp.group_service.entity.Group;
 import com.SettleUp.group_service.entity.GroupMember;
 import com.SettleUp.group_service.repository.GroupMemberRepository;
@@ -24,6 +26,7 @@ public class GroupService {
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
      
+    //Creating a group
     @Transactional
     public GroupResponse createGroup(CreateGroupRequest request, String creatorEmail) {
         Group group = buildGroup(request, creatorEmail);
@@ -33,7 +36,7 @@ public class GroupService {
         return mapToResponse(saveGroup);
     }
    
-   
+     //get method for group
        public List<GroupResponse> getUserGroups(String userEmail) {
 
         return groupMemberRepository.findByUserEmail(userEmail)
@@ -43,9 +46,105 @@ public class GroupService {
                 .toList();
     }
    
+
+    //getting group by id 
+    public GroupResponse getGroupById(Long id, String requesterEmail){
+        Group group= groupRepository.findById(id)
+        .orElseThrow(()-> new RuntimeException("Group not found"));
+ 
+        //Authorization: Check if the requester is actually a member of group
+        boolean isMember= group.getMembers().stream()
+        .anyMatch(member->member.getUserEmail().equals(requesterEmail));
+        if(!isMember){
+            throw new SecurityException("You are not authorized to view this group");
+        }
+        return mapToResponse(group);
+    }
    
+    //updating group name 
+    @Transactional
+    public GroupResponse updateGroup(Long id ,UpdateGroupRequest request , String requesterEmail){
+        Group group = groupRepository.findById(id)
+        .orElseThrow(()-> new RuntimeException("Group not found"));
+        // AUTHORIZATION: Only the creator can update the group name
+        if (!group.getCreatedByEmail().equals(requesterEmail)) {
+            throw new SecurityException("Only the group creator can update the group");
+        }
+        group.setName(request.name());
+        Group updateGroup= groupRepository.save(group);
+        return mapToResponse(updateGroup);
+    }
    
+    //Deleting group
+    @Transactional
+    public void deleteGroup(Long id , String requesterEmail){
+        Group group = groupRepository.findById(id)
+        .orElseThrow(()-> new RuntimeException("Group not founf"));
+        
+        // AUTHORIZATION: Only the creator can delete the group
+        if (!group.getCreatedByEmail().equals(requesterEmail)) {
+            throw new SecurityException("Only the group creator can delete the group");
+        }
+        groupRepository.delete(group);
+    }
+
+    //adding group members
+    @Transactional
+    public GroupResponse addMember(Long id, AddMemberRequest request, String requesterEmail) {
+        Group group = groupRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Group not found"));
+
+        // AUTHORIZATION: Only creator can add members
+        if (!group.getCreatedByEmail().equals(requesterEmail)) {
+            throw new SecurityException("Only the group creator can add members");
+        }
+
+        //preventing duplicates
+        boolean alreadyMember = group.getMembers().stream()
+                .anyMatch(member -> member.getUserEmail().equals(request.email()));
+
+        if (alreadyMember) {
+            throw new IllegalArgumentException("User is already a member of this group");
+        }
+
+        //  Adding new member
+        GroupMember newMember = GroupMember.builder()
+                .userEmail(request.email())
+                .group(group)
+                .build();
+                
+        group.getMembers().add(newMember);
+        
+        Group updatedGroup = groupRepository.save(group);
+        return mapToResponse(updatedGroup);
+    }
+
+    //Removing group members
+    @Transactional
+    public GroupResponse removeMember(Long id, String emailToRemove, String requesterEmail) {
+        Group group = groupRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Group not found"));
+
+        // AUTHORIZATION: Only creator can remove members
+        if (!group.getCreatedByEmail().equals(requesterEmail)) {
+            throw new SecurityException("Only the group creator can remove members");
+        }
+        //if someone try to remove group creator
+        if (group.getCreatedByEmail().equals(emailToRemove)) {
+            throw new IllegalArgumentException("The group creator cannot be removed");
+        }
+        // Action: Find and remove the member from the list
+        boolean removed = group.getMembers().removeIf(member -> member.getUserEmail().equals(emailToRemove));
+
+        if (!removed) {
+            throw new RuntimeException("User is not a member of this group");
+        }
+
+        Group updatedGroup = groupRepository.save(group);
+        return mapToResponse(updatedGroup);
+    }
    
+    
     // helper function to create group members
 
     private List<GroupMember> buildGroupMembers(
