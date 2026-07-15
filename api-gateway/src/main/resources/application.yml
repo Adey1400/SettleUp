@@ -6,22 +6,49 @@ spring:
     name: api-gateway
 
 
+  security:
+    jwt:
+      secret: ${JWT_SECRET}
 
   cloud:
     gateway:
       routes:
+        # USER SERVICE ROUTES (Port 8081) 
         - id: user-auth-route
           uri: http://localhost:8081
           predicates:
             - Path=/api/v1/auth/**
+         
 
-        - id: user-route
+        - id: user-profile-route
           uri: http://localhost:8081
           predicates:
             - Path=/api/v1/users/**
           filters:
             - AuthenticationFilter
-application:
-  security:
-    jwt:
-      secret: ${JWT_SECRET}
+
+          #  EXPENSE SERVICE ROUTES (Port 8083) 
+        - id: group-expense-route
+          uri: http://localhost:8083
+          order: 1
+          predicates:
+            - Path=/api/v1/groups/{groupId}/expenses
+          filters:
+            - AuthenticationFilter
+
+        - id: expense-route
+          uri: http://localhost:8083
+          order: 1
+          predicates:
+            - Path=/api/v1/expenses/**
+          filters:
+            - AuthenticationFilter
+
+        # --- GROUP SERVICE ROUTES (Port 8082) ---
+        - id: group-route
+          uri: http://localhost:8082
+          order: 2
+          predicates:
+            - Path=/api/v1/groups/**
+          filters:
+            - AuthenticationFilter
