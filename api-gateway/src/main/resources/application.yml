@@ -53,7 +53,7 @@ spring:
           filters:
             - AuthenticationFilter
         # --- BALANCE SERVICE ROUTES (Port 8084) ---
-        - id: balance-route
-          uri: http://localhost:8084
-          filters:
-            -AuthenticationFilter
+        # - id: balance-route
+        #   uri: http://localhost:8084
+        #   filters:
+        #     -AuthenticationFilter
