@@ -5,6 +5,7 @@ package com.SettleUp.expense_service.service;
 
 import com.SettleUp.expense_service.DTO.CreateExpenseRequest;
 import com.SettleUp.expense_service.DTO.ExpenseResponse;
+import com.SettleUp.expense_service.DTO.SplitResponse;
 import com.SettleUp.expense_service.entity.Expense;
 import com.SettleUp.expense_service.entity.ExpenseMetadata;
 import com.SettleUp.expense_service.entity.Split;
@@ -72,6 +73,10 @@ public class ExpenseService {
     }
 
     private ExpenseResponse mapToResponse(Expense expense) {
+        List<SplitResponse> splitResponses= expense.getSplits().stream().map(split -> new com.SettleUp.expense_service.DTO.SplitResponse(
+                        split.getOwedByEmail(), 
+                        split.getAmountOwed()))
+                .toList();
         return new ExpenseResponse(
                 expense.getId(),
                 expense.getGroupId(),
@@ -79,7 +84,8 @@ public class ExpenseService {
                 expense.getAmount(),
                 expense.getMetadata().getDescription(),
                 expense.getSplitType(),
-                expense.getMetadata().getCreatedAt()
+                expense.getMetadata().getCreatedAt(),
+                splitResponses
         );
     }
     // getting by id
