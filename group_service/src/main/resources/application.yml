@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: group_service
+    name: group-service
   
   datasource:
     url: jdbc:postgresql://localhost:5432/settleup_group_db
@@ -24,3 +24,10 @@ application:
   security:
     jwt:
       secret: ${JWT_SECRET}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true

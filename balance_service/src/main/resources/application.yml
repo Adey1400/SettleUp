@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: balance_service
+    name: balance-service
   
   datasource:
     url: jdbc:postgresql://localhost:5432/settleup_balance_db
@@ -24,3 +24,11 @@ application:
   security:
     jwt:
       secret: ${JWT_SECRET}
+
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true

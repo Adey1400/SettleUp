@@ -11,7 +11,7 @@ import com.SettleUp.balance_service.DTO.ExpenseResponse;
 
 import java.util.List;
 
-@FeignClient(name = "api-gateway", url = "http://localhost:8080")
+@FeignClient(name = "expense-service")
 public interface ExpenseClient {
 
     @GetMapping(value = "/api/v1/groups/{groupId}/expenses", headers = "Authorization={token}")

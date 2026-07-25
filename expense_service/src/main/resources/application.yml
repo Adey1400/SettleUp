@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: expense_service
+    name: expense-service
   
   datasource:
     url: jdbc:postgresql://localhost:5432/settleup_expense_db
@@ -24,3 +24,10 @@ application:
   security:
     jwt:
       secret: ${JWT_SECRET}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true

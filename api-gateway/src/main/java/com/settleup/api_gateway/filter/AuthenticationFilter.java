@@ -22,23 +22,23 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
     public GatewayFilter apply(Config config) {
         return (exchange, chain) -> {
             
-            // 1. Check if the Authorization header exists
+            // 1. Checking if the Authorization header exists
             if (!exchange.getRequest().getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
                 exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
                 return exchange.getResponse().setComplete();
             }
 
-            // 2. Extract the token
+            // 2. Extracting the token
             String authHeader = exchange.getRequest().getHeaders().get(HttpHeaders.AUTHORIZATION).get(0);
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 authHeader = authHeader.substring(7);
             }
 
-            // 3. Validate the token
+            // 3. Validating the token
             try {
                 jwtUtil.validateToken(authHeader);
             } catch (Exception e) {
-                // Token is expired, invalid, or forged
+                // IF Token is expired, invalid, or forged
                 exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
                 return exchange.getResponse().setComplete();
             }

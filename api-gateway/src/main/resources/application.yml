@@ -11,48 +11,63 @@ spring:
 
   cloud:
     gateway:
-      routes:
+      server:
+        webflux:
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOrigins: "http://localhost:5173"
+                allowedMethods:
+                  - GET
+                  - POST
+                  - PUT
+                  - DELETE
+                  - OPTIONS
+                allowedHeaders: "*"
+                allowCredentials: true
+          routes:
+            # --- USER SERVICE ROUTES --- 
+            - id: user-auth-route
+              uri: lb://user-service
+              predicates:
+                - Path=/api/v1/auth/**
+                
+            - id: user-profile-route
+              uri: lb://user-service
+              predicates:
+                - Path=/api/v1/users/**
+              filters:
+                - AuthenticationFilter
 
-        # USER SERVICE
-        - id: user-auth-route
-          uri: http://localhost:8081
-          predicates:
-            - Path=/api/v1/auth/**
+            # --- EXPENSE SERVICE ROUTES --- 
+            - id: group-expense-route
+              uri: lb://expense-service
+              order: 1
+              predicates:
+                - Path=/api/v1/groups/{groupId}/expenses
+              filters:
+                - AuthenticationFilter
+                
+            - id: expense-route
+              uri: lb://expense-service
+              order: 1
+              predicates:
+                - Path=/api/v1/expenses/**
+              filters:
+                - AuthenticationFilter
 
-        - id: user-profile-route
-          uri: http://localhost:8081
-          predicates:
-            - Path=/api/v1/users/**   # Verify your controller uses /users
-          filters:
-            - AuthenticationFilter
-
-        # EXPENSE SERVICE
-        - id: group-expense-route
-          uri: http://localhost:8083
-          predicates:
-            - Path=/api/v1/groups/{groupId}/expenses
-          filters:
-            - AuthenticationFilter
-
-        - id: expense-route
-          uri: http://localhost:8083
-          predicates:
-            - Path=/api/v1/expenses/**
-          filters:
-            - AuthenticationFilter
-
-        # GROUP SERVICE
-        - id: group-route
-          uri: http://localhost:8082
-          predicates:
-            - Path=/api/v1/groups/**
-          filters:
-            - AuthenticationFilter
-
-        # BALANCE SERVICE
-        - id: balance-route
-          uri: http://localhost:8084
-          predicates:
-            - Path=/api/v1/balances/**
-          filters:
-            - AuthenticationFilter
+            # --- GROUP SERVICE ROUTES --- 
+            - id: group-route
+              uri: lb://group-service
+              order: 2
+              predicates:
+                - Path=/api/v1/groups/**
+              filters:
+                - AuthenticationFilter
+            
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
