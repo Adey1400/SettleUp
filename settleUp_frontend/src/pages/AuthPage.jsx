@@ -10,7 +10,11 @@ export default function AuthPage({ isDark }) {
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-
+  // useEffect(() => {
+  //   if (localStorage.getItem('jwt_token')) {
+  //     navigate('/dashboard');
+  //   }
+  // }, [navigate]);
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (loading) return;

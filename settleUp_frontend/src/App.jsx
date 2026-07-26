@@ -6,7 +6,9 @@ import 'react-toastify/dist/ReactToastify.css';
 import LandingPage from './pages/LandingPage';
 import AuthPage from './pages/AuthPage';
 import DashboardPage from './pages/DashboardPage';
-
+import GroupView from './pages/GroupView';
+import ActivityPage from './pages/ActivityPage';
+import SettingsPage from './pages/SettingsPage';
 function App() {
   const [theme, setTheme] = useState(() => {
     if (typeof window === 'undefined') return 'dark';
@@ -39,6 +41,9 @@ function App() {
           <Route path="/" element={<LandingPage isDark={isDark} />} />
           <Route path="/auth" element={<AuthPage isDark={isDark} />} />
           <Route path="/dashboard" element={<DashboardPage isDark={isDark} />} />
+          <Route path="/group/:groupId" element={<GroupView isDark={isDark} />} />
+           <Route path="/activity" element={<ActivityPage isDark={isDark} />} />
+            <Route path="/settings" element={<SettingsPage isDark={isDark} />} />
         </Routes>
 
         <ToastContainer
