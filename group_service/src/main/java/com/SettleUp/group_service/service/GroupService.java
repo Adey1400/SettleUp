@@ -3,6 +3,7 @@ package com.SettleUp.group_service.service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.HashSet;
 import org.springframework.stereotype.Service;
@@ -10,9 +11,13 @@ import org.springframework.stereotype.Service;
 import com.SettleUp.group_service.DTO.AddMemberRequest;
 import com.SettleUp.group_service.DTO.CreateGroupRequest;
 import com.SettleUp.group_service.DTO.GroupResponse;
+import com.SettleUp.group_service.DTO.InviteResponse;
 import com.SettleUp.group_service.DTO.UpdateGroupRequest;
 import com.SettleUp.group_service.entity.Group;
+import com.SettleUp.group_service.entity.GroupInvite;
 import com.SettleUp.group_service.entity.GroupMember;
+import com.SettleUp.group_service.entity.InviteStatus;
+import com.SettleUp.group_service.repository.GroupInviteRepository;
 import com.SettleUp.group_service.repository.GroupMemberRepository;
 import com.SettleUp.group_service.repository.GroupRepository;
 
@@ -25,7 +30,7 @@ public class GroupService {
 
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
-     
+    private final GroupInviteRepository groupInviteRepository;
     //Creating a group
     @Transactional
     public GroupResponse createGroup(CreateGroupRequest request, String creatorEmail) {
@@ -88,37 +93,8 @@ public class GroupService {
         groupRepository.delete(group);
     }
 
-    //adding group members
-    @Transactional
-    public GroupResponse addMember(Long id, AddMemberRequest request, String requesterEmail) {
-        Group group = groupRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Group not found"));
 
-        // AUTHORIZATION: Only creator can add members
-        if (!group.getCreatedByEmail().equals(requesterEmail)) {
-            throw new SecurityException("Only the group creator can add members");
-        }
-
-        //preventing duplicates
-        boolean alreadyMember = group.getMembers().stream()
-                .anyMatch(member -> member.getUserEmail().equals(request.email()));
-
-        if (alreadyMember) {
-            throw new IllegalArgumentException("User is already a member of this group");
-        }
-
-        //  Adding new member
-        GroupMember newMember = GroupMember.builder()
-                .userEmail(request.email())
-                .group(group)
-                .build();
-                
-        group.getMembers().add(newMember);
-        
-        Group updatedGroup = groupRepository.save(group);
-        return mapToResponse(updatedGroup);
-    }
-
+   
     //Removing group members
     @Transactional
     public GroupResponse removeMember(Long id, String emailToRemove, String requesterEmail) {
@@ -207,4 +183,74 @@ private Set<String> collectUniqueEmails(
     return emails;
 }
 
+public InviteResponse inviteMember(Long groupId, String inviterEmail, String inviteeEmail){
+    Group group = groupRepository.findById(groupId)
+    .orElseThrow(()-> new RuntimeException("Group Not Found"));
+
+    //Checking if already a member
+    boolean alreadyMember =group.getMembers().stream().
+    anyMatch(member -> member.getUserEmail().equals(inviteeEmail));
+    if(alreadyMember){
+        throw new IllegalArgumentException("User is already a member of group");
+    }
+    //Checking if invite is already pending
+    Optional<GroupInvite> existingInvite = groupInviteRepository
+                .findByGroupIdAndInviteeEmailAndStatus(groupId, inviteeEmail, InviteStatus.PENDING);
+        if (existingInvite.isPresent()) {
+            throw new IllegalArgumentException("An invite is already pending for this user");
+    }
+    GroupInvite invite= GroupInvite.builder()
+    .groupId(groupId)
+    .groupName(group.getName())
+    .inviteeEmail(inviteeEmail)
+    .inviterEmail(inviterEmail)
+    .status(InviteStatus.PENDING)
+    .createdAt(LocalDateTime.now())
+    .build();
+    GroupInvite savedInvite=groupInviteRepository.save(invite);
+    return new InviteResponse(savedInvite.getId(), savedInvite.getGroupId(), savedInvite.getGroupName(), 
+                savedInvite.getInviterEmail(), savedInvite.getInviteeEmail(), savedInvite.getStatus().name(), savedInvite.getCreatedAt());
+
+}
+//getting pending invites
+public List<InviteResponse> getMyPendingInvites(String userEmail) {
+        return groupInviteRepository.findByInviteeEmailAndStatus(userEmail, InviteStatus.PENDING)
+                .stream()
+                .map(invite -> new InviteResponse(invite.getId(), invite.getGroupId(), invite.getGroupName(),
+                        invite.getInviterEmail(), invite.getInviteeEmail(), invite.getStatus().name(), invite.getCreatedAt()))
+                .toList();
+    }
+
+//Responding an invite
+@Transactional
+    public GroupResponse respondToInvite(Long inviteId, boolean accept, String userEmail) {
+        GroupInvite invite = groupInviteRepository.findById(inviteId)
+                .orElseThrow(() -> new RuntimeException("Invite not found"));
+
+        if (!invite.getInviteeEmail().equals(userEmail)) {
+            throw new SecurityException("You are not authorized to respond to this invite");
+        }
+
+        if (accept) {
+            invite.setStatus(InviteStatus.ACCEPTED);
+            Group group = groupRepository.findById(invite.getGroupId())
+                    .orElseThrow(() -> new RuntimeException("Group no longer exists"));
+            
+            GroupMember newMember = GroupMember.builder()
+                    .userEmail(userEmail)
+                    .group(group)
+                    .build();
+            group.getMembers().add(newMember);
+            groupRepository.save(group);
+        } else {
+            invite.setStatus(InviteStatus.REJECTED);
+        }
+
+        groupInviteRepository.save(invite);
+        
+        if(accept) {
+            return getGroupById(invite.getGroupId(), userEmail);
+        }
+        return null;
+    }
 }

@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import com.SettleUp.group_service.DTO.AddMemberRequest;
 import com.SettleUp.group_service.DTO.CreateGroupRequest;
 import com.SettleUp.group_service.DTO.GroupResponse;
+import com.SettleUp.group_service.DTO.InviteResponse;
 import com.SettleUp.group_service.DTO.UpdateGroupRequest;
 import com.SettleUp.group_service.service.GroupService;
 
@@ -69,15 +70,7 @@ public class GroupController {
         return ResponseEntity.noContent().build(); 
     }
 
-    @PostMapping("/{id}/members")
-    public ResponseEntity<GroupResponse> addMember(
-            @PathVariable Long id,
-            @Valid @RequestBody AddMemberRequest request,
-            Authentication authentication) {
-        
-        String requesterEmail = authentication.getName();
-        return ResponseEntity.ok(groupService.addMember(id, request, requesterEmail));
-    }
+   
 
     @DeleteMapping("/{id}/members/{userEmail}")
     public ResponseEntity<GroupResponse> removeMember(
@@ -87,5 +80,33 @@ public class GroupController {
         
         String requesterEmail = authentication.getName();
         return ResponseEntity.ok(groupService.removeMember(id, userEmail, requesterEmail));
+    }
+
+    //Sending an Invite
+    @PostMapping("/{id}/invites")
+    public ResponseEntity<InviteResponse> inviteMember(
+            @PathVariable Long id,
+            @Valid @RequestBody AddMemberRequest request,
+            Authentication authentication) {
+        String inviterEmail = authentication.getName();
+       return ResponseEntity.ok(groupService.inviteMember(id, inviterEmail, request.email()));
+    }
+
+    //Fetching Invites
+    @GetMapping("/invites/me")
+    public ResponseEntity<List<InviteResponse>> getMyInvites(Authentication authentication) {
+        String userEmail = authentication.getName();
+        return ResponseEntity.ok(groupService.getMyPendingInvites(userEmail));
+    }
+
+    //Responding to an Invite
+    @PostMapping("/invites/{inviteId}/respond")
+    public ResponseEntity<GroupResponse> respondToInvite(
+            @PathVariable Long inviteId,
+            @RequestParam boolean accept,
+            Authentication authentication) {
+        String userEmail = authentication.getName();
+        GroupResponse response = groupService.respondToInvite(inviteId, accept, userEmail);
+        return ResponseEntity.ok(response);
     }
 }

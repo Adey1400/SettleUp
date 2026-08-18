@@ -9,6 +9,7 @@ import DashboardPage from './pages/DashboardPage';
 import GroupView from './pages/GroupView';
 import ActivityPage from './pages/ActivityPage';
 import SettingsPage from './pages/SettingsPage';
+import NotificationsPage from './pages/NotificationPage';
 function App() {
   const [theme, setTheme] = useState(() => {
     if (typeof window === 'undefined') return 'dark';
@@ -44,6 +45,7 @@ function App() {
           <Route path="/group/:groupId" element={<GroupView isDark={isDark} />} />
            <Route path="/activity" element={<ActivityPage isDark={isDark} />} />
             <Route path="/settings" element={<SettingsPage isDark={isDark} />} />
+            <Route path="/notifications" element={<NotificationsPage isDark={isDark} />} />
         </Routes>
 
         <ToastContainer

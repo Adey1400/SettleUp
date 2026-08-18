@@ -65,6 +65,15 @@ spring:
               filters:
                 - AuthenticationFilter
             
+            # --- BALANCE SERVICE ROUTES --- 
+            - id: balance-route
+              uri: lb://balance-service
+              order: 1
+              predicates:
+                - Path=/api/v1/balances/**
+              filters:
+                - AuthenticationFilter
+            
 eureka:
   client:
     service-url:
