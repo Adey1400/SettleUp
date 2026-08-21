@@ -2,6 +2,7 @@ package com.SettleUp.balance_service.controller;
 
 
 import com.SettleUp.balance_service.DTO.DebtResponse;
+import com.SettleUp.balance_service.DTO.SettlementRequest;
 import com.SettleUp.balance_service.service.BalanceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -26,5 +27,10 @@ public class BalanceController {
         String authHeader = request.getHeader("Authorization");
         
         return ResponseEntity.ok(balanceService.calculateWhoOwesWhom(groupId, authHeader));
+    }
+    @PostMapping("/settlements")
+    public ResponseEntity<Void> recordSettlement(@RequestBody SettlementRequest request) {
+        balanceService.recordSettlement(request);
+        return ResponseEntity.ok().build();
     }
 }

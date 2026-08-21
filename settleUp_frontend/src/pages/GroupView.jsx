@@ -1,95 +1,173 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Receipt, ArrowRightLeft, User, Calendar, Plus, UserPlus, X } from 'lucide-react';
+import { ArrowLeft, Receipt, ArrowRightLeft, User, Calendar, Plus, UserPlus, X, DollarSign } from 'lucide-react';
 import { toast } from 'react-toastify';
 import apiClient from '../api/axiosConfig';
 
 export default function GroupView() {
   const { groupId } = useParams();
-  const [activeTab, setActiveTab] = useState('ledger'); 
-  
+  const [activeTab, setActiveTab] = useState('ledger');
+
   // Data States
   const [group, setGroup] = useState(null);
   const [expenses, setExpenses] = useState([]);
   const [settlements, setSettlements] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Modal States
+  // Add Member Modal States
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
   const [newMemberEmail, setNewMemberEmail] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmittingMember, setIsSubmittingMember] = useState(false);
+
+  // Add Expense Modal States
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [expenseDesc, setExpenseDesc] = useState('');
+  const [expenseAmount, setExpenseAmount] = useState('');
+  const [splitType, setSplitType] = useState('EQUAL');
+  const [splitData, setSplitData] = useState([]);
+  const [isSubmittingExpense, setIsSubmittingExpense] = useState(false);
+
+  const fetchGroupData = async () => {
+    try {
+      setIsLoading(true);
+      const [groupRes, expensesRes, balancesRes] = await Promise.all([
+        apiClient.get(`/groups/${groupId}`),
+        apiClient.get(`/groups/${groupId}/expenses`),
+        apiClient.get(`/balances/group/${groupId}`)
+      ]);
+
+      setGroup(groupRes.data);
+      setExpenses(Array.isArray(expensesRes.data) ? expensesRes.data : []);
+      setSettlements(Array.isArray(balancesRes.data) ? balancesRes.data : []);
+    } catch (error) {
+      console.error("Error fetching group data:", error);
+      toast.error("Unable to load group details.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchGroupData = async () => {
-      try {
-        setIsLoading(true);
-        // Fetch group details, expenses, and balances all at once!
-        const [groupRes, expensesRes, balancesRes] = await Promise.all([
-          apiClient.get(`/groups/${groupId}`),
-          apiClient.get(`/groups/${groupId}/expenses`),
-          apiClient.get(`/balances/group/${groupId}`)
-        ]);
-        
-        setGroup(groupRes.data);
-        setExpenses(Array.isArray(expensesRes.data) ? expensesRes.data : []);
-        setSettlements(Array.isArray(balancesRes.data) ? balancesRes.data : []);
-      } catch (error) {
-        console.error("Error fetching group data:", error);
-        toast.error("Unable to load group details.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchGroupData();
   }, [groupId]);
 
-  // Handle Adding a Member
-  // Handle Sending an Invite
+  // Sync split data options when group members load or modal opens
+  useEffect(() => {
+    if (group?.members) {
+      setSplitData(group.members.map(email => ({
+        email,
+        included: true,
+        amount: '',
+        percentage: ''
+      })));
+    }
+  }, [group, isExpenseModalOpen]);
+
+  // Handle Split Field Adjustments
+  const handleSplitChange = (index, field, value) => {
+    const newData = [...splitData];
+    newData[index][field] = value;
+    setSplitData(newData);
+  };
+
+  // Submit Member Invite
   const handleAddMember = async (e) => {
     e.preventDefault();
     if (!newMemberEmail.trim()) return;
-    setIsSubmitting(true);
+
+    setIsSubmittingMember(true);
     try {
-      await apiClient.post(`/groups/${groupId}/invites`, { 
-        email: newMemberEmail 
-      });
-      
-     
-      
+      await apiClient.post(`/groups/${groupId}/invites`, { email: newMemberEmail });
       setNewMemberEmail('');
       setIsMemberModalOpen(false);
       toast.success('Invite sent! They must accept it to join the group.');
     } catch (error) {
-      const msg = error.response?.data?.message || 'Failed to send invite.';
-      toast.error(msg);
+      toast.error(error.response?.data?.message || 'Failed to send invite.');
     } finally {
-      setIsSubmitting(false);
+      setIsSubmittingMember(false);
     }
   };
-  // Animation variants
-  const listVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+
+  // Submit New Expense
+  const handleAddExpense = async (e) => {
+    e.preventDefault();
+    if (!expenseDesc.trim() || !expenseAmount) return;
+
+    setIsSubmittingExpense(true);
+    try {
+      const activeSplits = splitData.filter(s => s.included);
+      if (activeSplits.length === 0) {
+        toast.error("You must include at least one person in the split.");
+        setIsSubmittingExpense(false);
+        return;
+      }
+
+      const payload = {
+        groupId: Number(groupId),
+        amount: parseFloat(expenseAmount),
+        description: expenseDesc,
+        splitType: splitType,
+        splits: activeSplits.map(s => ({
+          userEmail: s.email,
+          amount: splitType === 'EXACT' ? parseFloat(s.amount || 0) : null,
+          percentage: splitType === 'PERCENT' ? parseFloat(s.percentage || 0) : null
+        }))
+      };
+
+      await apiClient.post('/expenses', payload);
+      
+      // Refresh the ledger and debt graph seamlessly
+      fetchGroupData();
+      
+      setIsExpenseModalOpen(false);
+      setExpenseDesc('');
+      setExpenseAmount('');
+      setSplitType('EQUAL');
+      toast.success('Expense recorded successfully!');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to add expense.');
+    } finally {
+      setIsSubmittingExpense(false);
+    }
   };
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 10 },
-    visible: { opacity: 1, y: 0 }
+  // Handle Marking a Debt as Paid
+  const handleMarkPaid = async (debtorEmail, creditorEmail, amount) => {
+    try {
+      await apiClient.post('/balances/settlements', {
+        groupId: parseInt(groupId),
+        payerEmail: debtorEmail,
+        receiverEmail: creditorEmail,
+        amount: amount
+      });
+      
+      toast.success('Debt marked as paid!');
+      
+      // Refresh the data to recalculate the graph!
+      const [expensesRes, balancesRes] = await Promise.all([
+        apiClient.get(`/groups/${groupId}/expenses`),
+        apiClient.get(`/balances/group/${groupId}`)
+      ]);
+      setExpenses(Array.isArray(expensesRes.data) ? expensesRes.data : []);
+      setSettlements(Array.isArray(balancesRes.data) ? balancesRes.data : []);
+      
+    } catch (error) {
+      toast.error('Failed to record settlement.');
+    }
   };
+
+  // Animation variants
+  const listVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
+  const itemVariants = { hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } };
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-50 p-4 md:p-8 font-sans transition-colors duration-300">
       <div className="max-w-3xl mx-auto">
-        
         {/* Header Section */}
         <header className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
           <div className="flex items-center gap-4">
-            <Link 
-              to="/dashboard" 
-              className="p-2 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-500 rounded-full shadow-sm border border-slate-200 dark:border-slate-800 transition-colors"
-            >
+            <Link to="/dashboard" className="p-2 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-500 rounded-full shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <div>
@@ -99,7 +177,6 @@ export default function GroupView() {
           </div>
           
           <div className="flex flex-wrap items-center gap-2">
-            {/* Display Member Avatars */}
             <div className="flex -space-x-2 mr-2">
               {group?.members?.slice(0, 4).map((email, idx) => (
                 <div key={idx} title={email} className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 border-2 border-slate-100 dark:border-slate-950 flex items-center justify-center font-bold text-xs uppercase shadow-sm">
@@ -113,15 +190,11 @@ export default function GroupView() {
               )}
             </div>
 
-            <button 
-              onClick={() => setIsMemberModalOpen(true)}
-              className="p-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 shadow-sm transition-colors"
-              title="Add Member"
-            >
+            <button onClick={() => setIsMemberModalOpen(true)} className="p-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 shadow-sm transition-colors" title="Invite Member">
               <UserPlus className="w-5 h-5" />
             </button>
 
-            <button className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white px-5 py-2.5 rounded-2xl font-medium shadow-lg shadow-emerald-600/20 transition-all active:scale-95 ml-2">
+            <button onClick={() => setIsExpenseModalOpen(true)} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white px-5 py-2.5 rounded-2xl font-medium shadow-lg shadow-emerald-600/20 transition-all active:scale-95 ml-2">
               <Plus className="w-5 h-5" />
               <span className="hidden sm:inline">Add Expense</span>
             </button>
@@ -130,24 +203,10 @@ export default function GroupView() {
 
         {/* Tab Navigation */}
         <div className="flex p-1 mb-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
-          <button
-            onClick={() => setActiveTab('ledger')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-medium transition-all ${
-              activeTab === 'ledger' 
-                ? 'bg-slate-100 dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm' 
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-            }`}
-          >
+          <button onClick={() => setActiveTab('ledger')} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-medium transition-all ${activeTab === 'ledger' ? 'bg-slate-100 dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
             <Receipt className="w-4 h-4" /> Ledger
           </button>
-          <button
-            onClick={() => setActiveTab('settlements')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-medium transition-all ${
-              activeTab === 'settlements' 
-                ? 'bg-slate-100 dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm' 
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-            }`}
-          >
+          <button onClick={() => setActiveTab('settlements')} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-medium transition-all ${activeTab === 'settlements' ? 'bg-slate-100 dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
             <ArrowRightLeft className="w-4 h-4" /> Settlements
           </button>
         </div>
@@ -203,7 +262,6 @@ export default function GroupView() {
                             </div>
                             <span className="text-xs text-slate-500 mt-1 max-w-[80px] truncate" title={settlement.debtorEmail}>{settlement.debtorEmail.split('@')[0]}</span>
                           </div>
-                          
                           <div className="flex-1 flex flex-col items-center px-4">
                             <span className="text-sm font-bold text-slate-900 dark:text-white mb-1">${settlement.amount.toFixed(2)}</span>
                             <div className="w-full h-[2px] bg-slate-200 dark:bg-slate-700 relative flex items-center justify-center min-w-[60px]">
@@ -211,7 +269,6 @@ export default function GroupView() {
                             </div>
                             <span className="text-[10px] uppercase tracking-wider text-slate-400 mt-1 font-semibold">Owes</span>
                           </div>
-
                           <div className="flex flex-col items-center">
                             <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-sm">
                               {settlement.creditorEmail.charAt(0).toUpperCase()}
@@ -219,8 +276,9 @@ export default function GroupView() {
                             <span className="text-xs text-slate-500 mt-1 max-w-[80px] truncate" title={settlement.creditorEmail}>{settlement.creditorEmail.split('@')[0]}</span>
                           </div>
                         </div>
-                        
-                        <button className="w-full sm:w-auto px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-medium hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors shadow-sm">
+                        <button
+                        onClick={() => handleMarkPaid(settlement.debtorEmail, settlement.creditorEmail, settlement.amount)} 
+                        className="w-full sm:w-auto px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-medium hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors shadow-sm">
                           Mark Paid
                         </button>
                       </motion.div>
@@ -237,45 +295,89 @@ export default function GroupView() {
       <AnimatePresence>
         {isMemberModalOpen && (
           <>
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setIsMemberModalOpen(false)}
-              className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40"
-            />
-            
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-8 rounded-[2rem] border shadow-2xl z-50 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
-            >
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsMemberModalOpen(false)} className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40" />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-8 rounded-[2rem] border shadow-2xl z-50 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold">Add Member</h3>
+                <h3 className="text-2xl font-bold">Invite Member</h3>
                 <button onClick={() => setIsMemberModalOpen(false)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors">
                   <X className="w-5 h-5" />
                 </button>
               </div>
-
               <form onSubmit={handleAddMember}>
                 <div className="mb-6">
-                  <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">
-                    User Email
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    autoFocus
-                    placeholder="teammate@example.com"
-                    value={newMemberEmail}
-                    onChange={(e) => setNewMemberEmail(e.target.value)}
-                    className="w-full px-4 py-3.5 rounded-2xl border focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600"
-                  />
+                  <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">User Email</label>
+                  <input type="email" required autoFocus placeholder="teammate@example.com" value={newMemberEmail} onChange={(e) => setNewMemberEmail(e.target.value)} className="w-full px-4 py-3.5 rounded-2xl border focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600" />
+                </div>
+                <button type="submit" disabled={isSubmittingMember} className={`w-full py-3.5 rounded-2xl font-bold shadow-md transition-all bg-emerald-600 dark:bg-emerald-500 text-white dark:text-slate-950 hover:bg-emerald-500 dark:hover:bg-emerald-400 ${isSubmittingMember ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                  {isSubmittingMember ? 'Sending...' : 'Send Invite'}
+                </button>
+              </form>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Add Expense Modal */}
+      <AnimatePresence>
+        {isExpenseModalOpen && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsExpenseModalOpen(false)} className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40" />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-8 rounded-[2rem] border shadow-2xl z-50 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold">Record Expense</h3>
+                <button onClick={() => setIsExpenseModalOpen(false)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <form onSubmit={handleAddExpense}>
+                <div className="mb-4">
+                  <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">Description</label>
+                  <input type="text" required placeholder="e.g. Dinner at Mario's" value={expenseDesc} onChange={(e) => setExpenseDesc(e.target.value)} className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white" />
                 </div>
                 
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className={`w-full py-3.5 rounded-2xl font-bold shadow-md transition-all bg-emerald-600 dark:bg-emerald-500 text-white dark:text-slate-950 hover:bg-emerald-500 dark:hover:bg-emerald-400 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
-                >
-                  {isSubmitting ? 'Adding...' : 'Send Invite'}
+                <div className="mb-4">
+                  <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">Amount</label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input type="number" step="0.01" min="0.01" required placeholder="0.00" value={expenseAmount} onChange={(e) => setExpenseAmount(e.target.value)} className="w-full pl-10 pr-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white" />
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">Split Mode</label>
+                  <select value={splitType} onChange={(e) => setSplitType(e.target.value)} className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white appearance-none">
+                    <option value="EQUAL">Split Equally</option>
+                    <option value="EXACT">Split by Exact Amounts</option>
+                    <option value="PERCENT">Split by Percentages</option>
+                  </select>
+                </div>
+
+                {/* Dynamic Member Split Allocation */}
+                <div className="mb-6 space-y-2 max-h-40 overflow-y-auto pr-2">
+                  <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">Who is involved?</label>
+                  {splitData.map((split, index) => (
+                    <div key={split.email} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-950 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                      <input 
+                        type="checkbox" 
+                        checked={split.included} 
+                        onChange={(e) => handleSplitChange(index, 'included', e.target.checked)} 
+                        className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer"
+                      />
+                      <span className="text-sm flex-1 truncate dark:text-slate-200" title={split.email}>{split.email}</span>
+                      
+                      {splitType === 'EXACT' && split.included && (
+                        <input type="number" step="0.01" min="0" placeholder="$0.00" value={split.amount} onChange={(e) => handleSplitChange(index, 'amount', e.target.value)} className="w-24 px-2 py-1 text-sm rounded border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" required />
+                      )}
+                      
+                      {splitType === 'PERCENT' && split.included && (
+                        <input type="number" step="0.01" min="0" max="100" placeholder="0%" value={split.percentage} onChange={(e) => handleSplitChange(index, 'percentage', e.target.value)} className="w-20 px-2 py-1 text-sm rounded border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" required />
+                      )}
+                    </div>
+                  ))}
+                </div>
+                
+                <button type="submit" disabled={isSubmittingExpense} className={`w-full py-3.5 rounded-2xl font-bold shadow-md transition-all bg-emerald-600 dark:bg-emerald-500 text-white dark:text-slate-950 hover:bg-emerald-500 dark:hover:bg-emerald-400 ${isSubmittingExpense ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                  {isSubmittingExpense ? 'Recording...' : 'Add Expense'}
                 </button>
               </form>
             </motion.div>
@@ -286,13 +388,10 @@ export default function GroupView() {
   );
 }
 
-// Reusable empty state component
 function EmptyState({ icon, message }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500">
-      <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center mb-4">
-        {icon}
-      </div>
+      <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center mb-4">{icon}</div>
       <p className="font-medium text-lg text-slate-600 dark:text-slate-300">{message}</p>
     </div>
   );

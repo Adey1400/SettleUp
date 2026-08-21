@@ -9,9 +9,12 @@ import com.SettleUp.balance_service.client.ExpenseClient;
 import com.SettleUp.balance_service.entity.Settlement;
 import com.SettleUp.balance_service.entity.SettlementStatus;
 import com.SettleUp.balance_service.repository.SettlementRepository;
+
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -97,5 +100,21 @@ public class BalanceService {
         }
 
         return transactions;
+    }
+
+    
+    @Transactional
+    public void recordSettlement(com.SettleUp.balance_service.DTO.SettlementRequest request) {
+        Settlement settlement = Settlement.builder()
+                .groupId(request.groupId())
+                .payerEmail(request.payerEmail())
+                .receiverEmail(request.receiverEmail()) 
+                .amount(request.amount())
+                .status(SettlementStatus.COMPLETED)
+                .createdAt(LocalDateTime.now())
+                .completedAt(LocalDateTime.now())
+                .build();
+                
+        settlementRepository.save(settlement);
     }
 }
