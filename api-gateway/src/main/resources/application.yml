@@ -11,69 +11,67 @@ spring:
 
   cloud:
     gateway:
-      server:
-        webflux:
-          globalcors:
-            cors-configurations:
-              '[/**]':
-                allowedOrigins: "http://localhost:5173"
-                allowedMethods:
-                  - GET
-                  - POST
-                  - PUT
-                  - DELETE
-                  - OPTIONS
-                allowedHeaders: "*"
-                allowCredentials: true
-          routes:
-            # --- USER SERVICE ROUTES --- 
-            - id: user-auth-route
-              uri: lb://user-service
-              predicates:
-                - Path=/api/v1/auth/**
-                
-            - id: user-profile-route
-              uri: lb://user-service
-              predicates:
-                - Path=/api/v1/users/**
-              filters:
-                - AuthenticationFilter
-
-            # --- EXPENSE SERVICE ROUTES --- 
-            - id: group-expense-route
-              uri: lb://expense-service
-              order: 1
-              predicates:
-                - Path=/api/v1/groups/{groupId}/expenses
-              filters:
-                - AuthenticationFilter
-                
-            - id: expense-route
-              uri: lb://expense-service
-              order: 1
-              predicates:
-                - Path=/api/v1/expenses/**
-              filters:
-                - AuthenticationFilter
-
-            # --- GROUP SERVICE ROUTES --- 
-            - id: group-route
-              uri: lb://group-service
-              order: 2
-              predicates:
-                - Path=/api/v1/groups/**
-              filters:
-                - AuthenticationFilter
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: "http://localhost:5173"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+      routes:
+        # --- USER SERVICE ROUTES --- 
+        - id: user-auth-route
+          uri: lb://user-service
+          predicates:
+            - Path=/api/v1/auth/**
             
-            # --- BALANCE SERVICE ROUTES --- 
-            - id: balance-route
-              uri: lb://balance-service
-              order: 1
-              predicates:
-                - Path=/api/v1/balances/**
-              filters:
-                - AuthenticationFilter
+        - id: user-profile-route
+          uri: lb://user-service
+          predicates:
+            - Path=/api/v1/users/**
+          filters:
+            - AuthenticationFilter
+
+        # --- EXPENSE SERVICE ROUTES --- 
+        - id: group-expense-route
+          uri: lb://expense-service
+          order: 1
+          predicates:
+            - Path=/api/v1/groups/{groupId}/expenses
+          filters:
+            - AuthenticationFilter
             
+        - id: expense-route
+          uri: lb://expense-service
+          order: 1
+          predicates:
+            - Path=/api/v1/expenses/**
+          filters:
+            - AuthenticationFilter
+
+        # --- GROUP SERVICE ROUTES --- 
+        - id: group-route
+          uri: lb://group-service
+          order: 2
+          predicates:
+            - Path=/api/v1/groups/**
+          filters:
+            - AuthenticationFilter
+        
+        # --- BALANCE SERVICE ROUTES --- 
+        - id: balance-route
+          uri: lb://balance-service
+          order: 1
+          predicates:
+            - Path=/api/v1/balances/**
+          filters:
+            - AuthenticationFilter
+        
 eureka:
   client:
     service-url:

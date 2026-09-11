@@ -12,6 +12,9 @@ import com.SettleUp.balance_service.repository.SettlementRepository;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -24,6 +27,7 @@ public class BalanceService {
     private final ExpenseClient expenseClient;
     private final SettlementRepository settlementRepository;
 
+    @Cacheable(value = "group-balances", key="#groupId")
     public List<DebtResponse> calculateWhoOwesWhom(Long groupId, String jwtToken) {
         //Fetching all expenses from the other microservice
         List<ExpenseResponse> expenses = expenseClient.getGroupExpenses(groupId, jwtToken);
@@ -102,8 +106,9 @@ public class BalanceService {
         return transactions;
     }
 
-    
+
     @Transactional
+    @CacheEvict(value = "group-balances", key = "#request.groupId()")
     public void recordSettlement(com.SettleUp.balance_service.DTO.SettlementRequest request) {
         Settlement settlement = Settlement.builder()
                 .groupId(request.groupId())

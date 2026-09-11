@@ -13,6 +13,9 @@ import com.SettleUp.expense_service.repository.ExpenseRepository;
 import com.SettleUp.expense_service.service.strategy.SplitStrategy;
 import com.SettleUp.expense_service.service.strategy.SplitStrategyFactory;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,8 +29,10 @@ public class ExpenseService {
 
     private final ExpenseRepository expenseRepository;
     private final SplitStrategyFactory splitStrategyFactory;
-
+    private final CacheManager cacheManager;
+    
     @Transactional
+    @CacheEvict(value = "group-balances", key = "#request.groupId()")
     public ExpenseResponse createExpense(CreateExpenseRequest request, String creatorEmail) {
         
         //Buildiing the Metadata
@@ -97,6 +102,7 @@ public class ExpenseService {
 
     //updating expense
     @Transactional
+    @CacheEvict(value = "group-balances", key = "#request.groupId()")
     public ExpenseResponse updateExpense(Long id, CreateExpenseRequest request, String requesterEmail) {
         Expense expense = expenseRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Expense not found"));
@@ -136,5 +142,9 @@ public class ExpenseService {
 
        
         expenseRepository.delete(expense);
+        // Manually clear the cache using the entity's groupId
+        if (cacheManager.getCache("group-balances") != null) {
+            cacheManager.getCache("group-balances").evict(expense.getGroupId());
+        }
     }
 }

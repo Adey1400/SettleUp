@@ -14,7 +14,7 @@ import java.util.List;
 @FeignClient(name = "expense-service")
 public interface ExpenseClient {
 
-    @GetMapping(value = "/api/v1/groups/{groupId}/expenses", headers = "Authorization={token}")
+    @GetMapping(value = "/api/v1/groups/{groupId}/expenses")
     List<ExpenseResponse> getGroupExpenses(
             @PathVariable("groupId") Long groupId,
             @org.springframework.web.bind.annotation.RequestHeader("Authorization") String token
