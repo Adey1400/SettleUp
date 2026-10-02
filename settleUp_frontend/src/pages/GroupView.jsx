@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Receipt, ArrowRightLeft, User, Calendar, Plus, UserPlus, X, DollarSign } from 'lucide-react';
+import { ArrowLeft, Receipt, ArrowRightLeft, User, Calendar, Plus, UserPlus, X, DollarSign, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import apiClient from '../api/axiosConfig';
 
 export default function GroupView() {
   const { groupId } = useParams();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('ledger');
 
   // Data States
   const [group, setGroup] = useState(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState('');
   const [expenses, setExpenses] = useState([]);
   const [settlements, setSettlements] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -27,6 +29,16 @@ export default function GroupView() {
   const [splitType, setSplitType] = useState('EQUAL');
   const [splitData, setSplitData] = useState([]);
   const [isSubmittingExpense, setIsSubmittingExpense] = useState(false);
+
+  // Group management states
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [renamedGroupName, setRenamedGroupName] = useState('');
+  const [isSubmittingGroupAction, setIsSubmittingGroupAction] = useState(false);
+
+  const isGroupCreator = Boolean(
+    group?.createdByEmail && currentUserEmail &&
+    group.createdByEmail.toLowerCase() === currentUserEmail.toLowerCase()
+  );
 
   const fetchGroupData = async () => {
     try {
@@ -51,6 +63,48 @@ export default function GroupView() {
   useEffect(() => {
     fetchGroupData();
   }, [groupId]);
+
+  useEffect(() => {
+    apiClient.get('/users/me')
+      .then(({ data }) => setCurrentUserEmail(data.email || ''))
+      .catch(() => setCurrentUserEmail(''));
+  }, []);
+
+  const handleRenameGroup = async (event) => {
+    event.preventDefault();
+    const name = renamedGroupName.trim();
+    if (!name || name === group?.name) {
+      setIsRenameModalOpen(false);
+      return;
+    }
+
+    setIsSubmittingGroupAction(true);
+    try {
+      const { data } = await apiClient.put(`/groups/${groupId}`, { name });
+      setGroup(data);
+      setIsRenameModalOpen(false);
+      toast.success('Group renamed successfully.');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to rename group.');
+    } finally {
+      setIsSubmittingGroupAction(false);
+    }
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!window.confirm(`Delete "${group.name}"? This action cannot be undone.`)) return;
+
+    setIsSubmittingGroupAction(true);
+    try {
+      await apiClient.delete(`/groups/${groupId}`);
+      toast.success('Group deleted.');
+      navigate('/dashboard');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to delete group.');
+    } finally {
+      setIsSubmittingGroupAction(false);
+    }
+  };
 
   // Sync split data options when group members load or modal opens
   useEffect(() => {
@@ -194,6 +248,32 @@ export default function GroupView() {
               <UserPlus className="w-5 h-5" />
             </button>
 
+            {isGroupCreator && (
+              <>
+                <button
+                  onClick={() => {
+                    setRenamedGroupName(group.name);
+                    setIsRenameModalOpen(true);
+                  }}
+                  disabled={isSubmittingGroupAction}
+                  className="p-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 shadow-sm transition-colors disabled:opacity-50"
+                  title="Rename group"
+                  aria-label="Rename group"
+                >
+                  <Pencil className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={handleDeleteGroup}
+                  disabled={isSubmittingGroupAction}
+                  className="p-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 shadow-sm transition-colors disabled:opacity-50"
+                  title="Delete group"
+                  aria-label="Delete group"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </>
+            )}
+
             <button onClick={() => setIsExpenseModalOpen(true)} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white px-5 py-2.5 rounded-2xl font-medium shadow-lg shadow-emerald-600/20 transition-all active:scale-95 ml-2">
               <Plus className="w-5 h-5" />
               <span className="hidden sm:inline">Add Expense</span>
@@ -290,6 +370,30 @@ export default function GroupView() {
           )}
         </div>
       </div>
+
+      {/* Rename Group Modal */}
+      <AnimatePresence>
+        {isRenameModalOpen && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsRenameModalOpen(false)} className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40" />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-8 rounded-[2rem] border shadow-2xl z-50 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold">Rename Group</h3>
+                <button type="button" onClick={() => setIsRenameModalOpen(false)} aria-label="Close rename dialog" className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <form onSubmit={handleRenameGroup}>
+                <label htmlFor="renamed-group-name" className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">Group name</label>
+                <input id="renamed-group-name" type="text" required maxLength={100} autoFocus value={renamedGroupName} onChange={(event) => setRenamedGroupName(event.target.value)} className="w-full px-4 py-3.5 mb-6 rounded-2xl border focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white" />
+                <button type="submit" disabled={isSubmittingGroupAction || !renamedGroupName.trim()} className="w-full py-3.5 rounded-2xl font-bold shadow-md transition-all bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-60 disabled:cursor-not-allowed">
+                  {isSubmittingGroupAction ? 'Saving...' : 'Save name'}
+                </button>
+              </form>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Add Member Modal */}
       <AnimatePresence>

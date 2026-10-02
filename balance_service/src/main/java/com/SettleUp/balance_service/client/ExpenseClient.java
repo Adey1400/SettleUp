@@ -1,22 +1,19 @@
 package com.SettleUp.balance_service.client;
 
-
-
-
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-
+import org.springframework.web.bind.annotation.RequestHeader;
 import com.SettleUp.balance_service.DTO.ExpenseResponse;
-
 import java.util.List;
 
 @FeignClient(name = "expense-service")
 public interface ExpenseClient {
 
+
     @GetMapping(value = "/api/v1/groups/{groupId}/expenses")
     List<ExpenseResponse> getGroupExpenses(
             @PathVariable("groupId") Long groupId,
-            @org.springframework.web.bind.annotation.RequestHeader("Authorization") String token
+            @RequestHeader("Authorization") String token
     );
 }
